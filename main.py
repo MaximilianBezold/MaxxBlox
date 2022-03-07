@@ -209,7 +209,7 @@ def about():
 def contact():
     if request.method == "POST":
         data = request.form
-        with smtplib.SMTP("smtp.gmail.com") as connection:
+        with smtplib.SMTP(host="smtp.gmail.com", port=587) as connection:
             connection.starttls()
             connection.login(user=GMAIL, password=PASSWORD)
             connection.sendmail(from_addr=GMAIL,
