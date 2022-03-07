@@ -211,8 +211,8 @@ def contact():
         data = request.form
         with smtplib.SMTP(host="smtp.gmail.com", port=587) as connection:
             connection.starttls()
-            connection.login(user=GMAIL, password=PASSWORD)
-            connection.sendmail(from_addr=GMAIL,
+            connection.login(user=str(GMAIL), password=str(PASSWORD))
+            connection.sendmail(from_addr=str(GMAIL),
                                 to_addrs="maxi.bezold@gmail.com",
                                 msg=f'Subject: New Message from your Blog!\n\n'
                                     f'Name: {data["name"]}\n'
