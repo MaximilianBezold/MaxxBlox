@@ -228,11 +228,12 @@ def contact():
     form = ContactForm()
     if form.validate_on_submit():
         # # DISCORD SETUP
+        text = form.message.data.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
         message = f'<b>New Message from your Blog!</b>\n\n' \
                   f'<b>Name:</b> {form.name.data}\n' \
                   f'<b>Email:</b> {form.email.data}\n' \
                   f'<b>Phone:</b> {form.phone.data}\n' \
-                  f'<b>Message:</b>\n{form.message.data}'
+                  f'<b>Message:</b>\n{text}'
         telegram_bot_send_text(message)
 
         # # EMAIL SETUP
@@ -247,6 +248,11 @@ def contact():
         #                             f'Phone: {form.phone.data}\n'
         #                             f'Message: {form.message.data}'
         #                         )
+
+        form.name.data = ""
+        form.email.data = ""
+        form.phone.data = ""
+        form.message.data = ""
 
         return render_template("contact.html", contacted=True, form=form)
     return render_template("contact.html", contacted=False, form=form)
