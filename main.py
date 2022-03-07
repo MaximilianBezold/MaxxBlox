@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, flash, abort, request
+from flask import Flask, render_template, redirect, url_for, flash, abort
 from flask_bootstrap import Bootstrap
 from flask_ckeditor import CKEditor
 from datetime import date
@@ -6,18 +6,24 @@ from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import relationship
-from flask_login import UserMixin, login_user, LoginManager, login_required, current_user, logout_user
-from forms import LoginForm, RegisterForm, CreatePostForm, CommentForm
+from flask_login import UserMixin, login_user, LoginManager, current_user, logout_user
+from forms import LoginForm, RegisterForm, CreatePostForm, CommentForm, ContactForm
 from flask_gravatar import Gravatar
 from typing import Callable
 import bleach
-import smtplib
+# import smtplib
 import os
 from dotenv import load_dotenv
+import requests
 
 load_dotenv("C:/Python/EnvironmentVariables/.env")
+# Gmail Account
 GMAIL = os.getenv("MyGmail")
 PASSWORD = os.getenv("MyGmailPassword")
+# Discord Bot
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+BOT_CHAT_ID = os.getenv("BOT_CHAT_ID")
+DISCORD_ENDPOINT = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 
 
 class MySQLAlchemy(SQLAlchemy):
@@ -68,6 +74,18 @@ def strip_invalid_html(content):
                            strip=True)
 
     return cleaned
+
+
+def telegram_bot_send_text(bot_message):
+    params = {
+        "chat_id": BOT_CHAT_ID,
+        "parse_mode": "HTML",
+        "text": bot_message,
+    }
+    bot_response = requests.get(url=DISCORD_ENDPOINT, params=params)
+    bot_response.raise_for_status()
+
+    return bot_response.json()
 
 
 @login_manager.user_loader
@@ -207,21 +225,31 @@ def about():
 
 @app.route("/contact", methods=["GET", "POST"])
 def contact():
-    if request.method == "POST":
-        data = request.form
-        with smtplib.SMTP(host="smtp.gmail.com", port=587) as connection:
-            connection.starttls()
-            connection.login(user=str(GMAIL), password=str(PASSWORD))
-            connection.sendmail(from_addr=str(GMAIL),
-                                to_addrs="maxi.bezold@gmail.com",
-                                msg=f'Subject: New Message from your Blog!\n\n'
-                                    f'Name: {data["name"]}\n'
-                                    f'Email: {data["email"]}\n'
-                                    f'Phone: {data["phone"]}\n'
-                                    f'Message: {data["message"]}'
-                                )
-        return render_template("contact.html", contacted=True)
-    return render_template("contact.html", contacted=False)
+    form = ContactForm()
+    if form.validate_on_submit():
+        # # DISCORD SETUP
+        message = f'<b>New Message from your Blog!</b>\n\n' \
+                  f'<b>Name:</b> {form.name.data}\n' \
+                  f'<b>Email:</b> {form.email.data}\n' \
+                  f'<b>Phone:</b> {form.phone.data}\n' \
+                  f'<b>Message:</b>\n{form.message.data}'
+        telegram_bot_send_text(message)
+
+        # # EMAIL SETUP
+        # with smtplib.SMTP(host="smtp.gmail.com", port=587) as connection:
+        #     connection.starttls()
+        #     connection.login(user=str(GMAIL), password=str(PASSWORD))
+        #     connection.sendmail(from_addr=str(GMAIL),
+        #                         to_addrs="maxi.bezold@gmail.com",
+        #                         msg=f'Subject: New Message from your Blog!\n\n'
+        #                             f'Name: {form.name.data}\n'
+        #                             f'Email: {form.email.data}\n'
+        #                             f'Phone: {form.phone.data}\n'
+        #                             f'Message: {form.message.data}'
+        #                         )
+
+        return render_template("contact.html", contacted=True, form=form)
+    return render_template("contact.html", contacted=False, form=form)
 
 
 @app.route("/new-post", methods=["GET", "POST"])
